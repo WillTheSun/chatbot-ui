@@ -12,10 +12,10 @@ import { ReactNode } from "react"
 import "./globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
-const APP_NAME = "Chat with Will"
-const APP_DEFAULT_TITLE = "Chat with Will"
-const APP_TITLE_TEMPLATE = "%s - Chat with Will"
-const APP_DESCRIPTION = "An open source UI for ChatGPT."
+const APP_NAME = "Willbot"
+const APP_DEFAULT_TITLE = "Willbot"
+const APP_TITLE_TEMPLATE = "%s - Willbot"
+const APP_DESCRIPTION = "Talk to Will!"
 
 interface RootLayoutProps {
   children: ReactNode
