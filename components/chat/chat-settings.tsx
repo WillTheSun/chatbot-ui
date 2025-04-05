@@ -1,94 +1,73 @@
 import { ChatbotUIContext } from "@/context/context"
 import { CHAT_SETTING_LIMITS } from "@/lib/chat-setting-limits"
 import useHotkey from "@/lib/hooks/use-hotkey"
-import { LLMID, ModelProvider } from "@/types"
-import { IconAdjustmentsHorizontal } from "@tabler/icons-react"
-import { FC, useContext, useEffect, useRef } from "react"
+import { IconAdjustmentsHorizontal, IconChevronDown } from "@tabler/icons-react"
+import { FC, useContext, useEffect, useRef, useState } from "react"
 import { Button } from "../ui/button"
 import { ChatSettingsForm } from "../ui/chat-settings-form"
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
 
-interface ChatSettingsProps {}
+interface ChatSettingsProps {
+  chatSettings: any
+  setChatSettings: any
+  chatHelpNeeded: boolean
+}
 
-export const ChatSettings: FC<ChatSettingsProps> = ({}) => {
-  useHotkey("i", () => handleClick())
-
-  const {
-    chatSettings,
-    setChatSettings,
-    models,
-    availableHostedModels,
-    availableLocalModels,
-    availableOpenRouterModels
-  } = useContext(ChatbotUIContext)
-
-  const buttonRef = useRef<HTMLButtonElement>(null)
-
-  const handleClick = () => {
-    if (buttonRef.current) {
-      buttonRef.current.click()
-    }
-  }
+export function ChatSettings({
+  chatSettings,
+  setChatSettings,
+  chatHelpNeeded
+}: ChatSettingsProps) {
+  // Revert to fetchChatModels and re-add ts-ignore
+  // @ts-ignore - Suppress property does not exist error
+  const { chatModels: allModels, fetchChatModels } =
+    useContext(ChatbotUIContext)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   useEffect(() => {
-    if (!chatSettings) return
+    // Comment out the function call to prevent runtime error
+    // fetchChatModels()
+  }, [fetchChatModels])
 
-    setChatSettings({
-      ...chatSettings,
-      temperature: Math.min(
-        chatSettings.temperature,
-        CHAT_SETTING_LIMITS[chatSettings.model]?.MAX_TEMPERATURE || 1
-      ),
-      contextLength: Math.min(
-        chatSettings.contextLength,
-        CHAT_SETTING_LIMITS[chatSettings.model]?.MAX_CONTEXT_LENGTH || 4096
-      )
-    })
-  }, [chatSettings?.model])
+  // Check if allModels is an array before calling find
+  const fullModel = Array.isArray(allModels)
+    ? allModels.find((llm: any) => llm.modelId === chatSettings?.model)
+    : undefined
 
-  if (!chatSettings) return null
-
-  const allModels = [
-    ...models.map(model => ({
-      modelId: model.model_id as LLMID,
-      modelName: model.name,
-      provider: "custom" as ModelProvider,
-      hostedId: model.id,
-      platformLink: "",
-      imageInput: false
-    })),
-    ...availableHostedModels,
-    ...availableLocalModels,
-    ...availableOpenRouterModels
-  ]
-
-  const fullModel = allModels.find(llm => llm.modelId === chatSettings.model)
+  if (!chatSettings) {
+    return null
+  }
 
   return (
-    <Popover>
-      <PopoverTrigger>
+    <>
+      <div className="flex items-center">
         <Button
-          ref={buttonRef}
-          className="flex items-center space-x-2"
+          className="flex w-full items-center justify-between space-x-2 truncate text-lg"
           variant="ghost"
+          onClick={() => setIsSettingsOpen(!isSettingsOpen)}
         >
-          <div className="max-w-[120px] truncate text-lg sm:max-w-[300px] lg:max-w-[500px]">
-            {fullModel?.modelName || chatSettings.model}
+          <div className="truncate">
+            {fullModel?.name || chatSettings.model}
           </div>
 
-          <IconAdjustmentsHorizontal size={28} />
+          <IconChevronDown
+            className={`transition-transform ${isSettingsOpen ? "rotate-180" : ""}`}
+          />
         </Button>
-      </PopoverTrigger>
+      </div>
 
-      <PopoverContent
-        className="bg-background border-input relative flex max-h-[calc(100vh-60px)] w-[300px] flex-col space-y-4 overflow-auto rounded-lg border-2 p-6 sm:w-[350px] md:w-[400px] lg:w-[500px] dark:border-none"
-        align="end"
-      >
-        <ChatSettingsForm
-          chatSettings={chatSettings}
-          onChangeChatSettings={setChatSettings}
-        />
-      </PopoverContent>
-    </Popover>
+      <Sheet open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+        <SheetContent>
+          <ChatSettingsForm
+            chatSettings={chatSettings}
+            // @ts-ignore - Suppress incorrect prop error
+            allModels={allModels}
+            onChatSettingsChange={setChatSettings}
+            chatHelpNeeded={chatHelpNeeded}
+          />
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }

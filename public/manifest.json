@@ -1,9 +1,9 @@
 {
-  "short_name": "Chatbot UI",
-  "name": "Chatbot UI",
+  "short_name": "Chat with Will",
+  "name": "Chat with Will",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/icons/icon-192.png",
       "type": "image/ico",
       "sizes": "192x192"
     },

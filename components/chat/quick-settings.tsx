@@ -25,6 +25,8 @@ import { set } from "date-fns"
 interface QuickSettingsProps {}
 
 export const QuickSettings: FC<QuickSettingsProps> = ({}) => {
+  return null // === HIDE COMPONENT ===
+
   const { t } = useTranslation()
 
   useHotkey("p", () => setIsOpen(prevState => !prevState))

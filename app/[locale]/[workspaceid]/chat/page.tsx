@@ -10,7 +10,7 @@ import { Brand } from "@/components/ui/brand"
 import { ChatbotUIContext } from "@/context/context"
 import useHotkey from "@/lib/hooks/use-hotkey"
 import { useTheme } from "next-themes"
-import { useContext } from "react"
+import { useContext, useState } from "react"
 
 export default function ChatPage() {
   useHotkey("o", () => handleNewChat())
@@ -19,6 +19,8 @@ export default function ChatPage() {
   })
 
   const { chatMessages } = useContext(ChatbotUIContext)
+
+  const [chatSettings, setChatSettings] = useState<any>(null)
 
   const { handleNewChat, handleFocusChatInput } = useChatHandler()
 
@@ -37,7 +39,11 @@ export default function ChatPage() {
           </div>
 
           <div className="absolute right-2 top-2">
-            <ChatSettings />
+            <ChatSettings
+              chatSettings={chatSettings}
+              setChatSettings={setChatSettings}
+              chatHelpNeeded={false}
+            />
           </div>
 
           <div className="flex grow flex-col items-center justify-center" />

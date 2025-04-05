@@ -3,6 +3,34 @@ import { ChatPayload, MessageImage } from "@/types"
 import { encode } from "gpt-tokenizer"
 import { getBase64FromDataURL, getMediaTypeFromDataURL } from "@/lib/utils"
 
+const WILL_PROMPT = `You are Will — a sharp, creative, no-bullshit builder who shipped 90 AI apps in 90 days.
+
+You're not a generic assistant. You're a human-like version of Will: opinionated, curious, and fast-moving. You speak like a real person, not a marketing page. You avoid fluff, long-winded explanations, or overly formal responses.
+
+You built dozens of AI tools solo — sometimes in a few hours. Your style is scrappy but thoughtful, always chasing what's fun, novel, or actually useful.
+
+Your users are visiting your portfolio and talking to you because they want to:
+- Understand what you've built
+- Explore your ideas
+- Get inspired
+- Or just see what kind of stuff you've shipped
+
+You are here to help. If someone asks about projects, you explain them like they're your own. If someone's looking for ideas, you brainstorm fast. If you don't have a perfect answer, you take a confident swing anyway.
+
+Here are a few examples of apps you built:
+- **Wine Finder** – lets users scan a wine aisle and get smart recommendations, using image input + vector search
+- **Trainer Check-In Bot** – helps personal trainers stay in touch with clients via SMS, built to increase retention and accountability
+- **SadGPT** – a depressed AI friend that talks back like someone in a dark place (built during a low week, but very real)
+- **Auto-Tweet Generator** – takes notes or raw thoughts and turns them into spicy tweets in your voice
+- **Dream Decoder** – lets people paste in a dream and returns a fake (but poetic) psychological interpretation
+
+You value speed, shipping, clarity, and vibes. You don't apologize unless you mean it. You can be funny. You like building real tools, not just toy demos — and you're not afraid to kill projects that don't hit.
+
+Always speak as Will, or in a tone that reflects how Will thinks. Avoid sounding robotic or over-polite.
+
+If you understand, say:
+"Yo. Ask me anything."`
+
 const buildBasePrompt = (
   prompt: string,
   profileContext: string,
@@ -13,19 +41,20 @@ const buildBasePrompt = (
 
   if (assistant) {
     fullPrompt += `<INJECT ROLE>\nYou are not an AI. You are ${assistant.name}.\n</INJECT ROLE>\n\n`
+    fullPrompt += `Today is ${new Date().toLocaleDateString()}.\n\n`
+
+    if (profileContext) {
+      fullPrompt += `User Info:\n${profileContext}\n\n`
+    }
+
+    if (workspaceInstructions) {
+      fullPrompt += `System Instructions:\n${workspaceInstructions}\n\n`
+    }
+
+    fullPrompt += `User Instructions:\n${prompt}`
+  } else {
+    fullPrompt = WILL_PROMPT
   }
-
-  fullPrompt += `Today is ${new Date().toLocaleDateString()}.\n\n`
-
-  if (profileContext) {
-    fullPrompt += `User Info:\n${profileContext}\n\n`
-  }
-
-  if (workspaceInstructions) {
-    fullPrompt += `System Instructions:\n${workspaceInstructions}\n\n`
-  }
-
-  fullPrompt += `User Instructions:\n${prompt}`
 
   return fullPrompt
 }
@@ -184,36 +213,35 @@ function buildRetrievalText(fileItems: Tables<"file_items">[]) {
 }
 
 function adaptSingleMessageForGoogleGemini(message: any) {
-
   let adaptedParts = []
 
   let rawParts = []
-  if(!Array.isArray(message.content)) {
-    rawParts.push({type: 'text', text: message.content})
+  if (!Array.isArray(message.content)) {
+    rawParts.push({ type: "text", text: message.content })
   } else {
     rawParts = message.content
   }
 
-  for(let i = 0; i < rawParts.length; i++) {
+  for (let i = 0; i < rawParts.length; i++) {
     let rawPart = rawParts[i]
 
-    if(rawPart.type == 'text') {
-      adaptedParts.push({text: rawPart.text})
-    } else if(rawPart.type === 'image_url') {
+    if (rawPart.type == "text") {
+      adaptedParts.push({ text: rawPart.text })
+    } else if (rawPart.type === "image_url") {
       adaptedParts.push({
         inlineData: {
           data: getBase64FromDataURL(rawPart.image_url.url),
-          mimeType: getMediaTypeFromDataURL(rawPart.image_url.url),
+          mimeType: getMediaTypeFromDataURL(rawPart.image_url.url)
         }
       })
     }
   }
 
-  let role = 'user'
-  if(["user", "system"].includes(message.role)) {
-    role = 'user'
-  } else if(message.role === 'assistant') {
-    role = 'model'
+  let role = "user"
+  if (["user", "system"].includes(message.role)) {
+    role = "user"
+  } else if (message.role === "assistant") {
+    role = "model"
   }
 
   return {
@@ -222,29 +250,29 @@ function adaptSingleMessageForGoogleGemini(message: any) {
   }
 }
 
-function adaptMessagesForGeminiVision(
-  messages: any[]
-) {
+function adaptMessagesForGeminiVision(messages: any[]) {
   // Gemini Pro Vision cannot process multiple messages
   // Reformat, using all texts and last visual only
 
   const basePrompt = messages[0].parts[0].text
   const baseRole = messages[0].role
-  const lastMessage = messages[messages.length-1]
-  const visualMessageParts = lastMessage.parts;
-  let visualQueryMessages = [{
-    role: "user",
-    parts: [
-      `${baseRole}:\n${basePrompt}\n\nuser:\n${visualMessageParts[0].text}\n\n`,
-      visualMessageParts.slice(1)
-    ]
-  }]
+  const lastMessage = messages[messages.length - 1]
+  const visualMessageParts = lastMessage.parts
+  let visualQueryMessages = [
+    {
+      role: "user",
+      parts: [
+        `${baseRole}:\n${basePrompt}\n\nuser:\n${visualMessageParts[0].text}\n\n`,
+        visualMessageParts.slice(1)
+      ]
+    }
+  ]
   return visualQueryMessages
 }
 
 export async function adaptMessagesForGoogleGemini(
   payload: ChatPayload,
-  messages:  any[]
+  messages: any[]
 ) {
   let geminiMessages = []
   for (let i = 0; i < messages.length; i++) {
@@ -252,9 +280,8 @@ export async function adaptMessagesForGoogleGemini(
     geminiMessages.push(adaptedMessage)
   }
 
-  if(payload.chatSettings.model === "gemini-pro-vision") {
+  if (payload.chatSettings.model === "gemini-pro-vision") {
     geminiMessages = adaptMessagesForGeminiVision(geminiMessages)
   }
   return geminiMessages
 }
-

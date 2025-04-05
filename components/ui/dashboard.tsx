@@ -37,6 +37,11 @@ export const Dashboard: FC<DashboardProps> = ({ children }) => {
   )
   const [isDragging, setIsDragging] = useState(false)
 
+  // === HIDE SIDEBAR IN PROD ===
+  const isProduction = process.env.NODE_ENV === "production"
+  const isSidebarVisible = isProduction ? false : showSidebar
+  // ===========================
+
   const onFileDrop = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault()
 
@@ -63,8 +68,10 @@ export const Dashboard: FC<DashboardProps> = ({ children }) => {
   }
 
   const handleToggleSidebar = () => {
-    setShowSidebar(prevState => !prevState)
-    localStorage.setItem("showSidebar", String(!showSidebar))
+    // Still allow toggling state for local storage, but visibility is controlled by isSidebarVisible
+    const newState = !showSidebar
+    setShowSidebar(newState)
+    localStorage.setItem("showSidebar", String(newState))
   }
 
   return (
@@ -73,16 +80,17 @@ export const Dashboard: FC<DashboardProps> = ({ children }) => {
 
       <div
         className={cn(
-          "duration-200 dark:border-none " + (showSidebar ? "border-r-2" : "")
+          "duration-200 dark:border-none " +
+            (isSidebarVisible ? "border-r-2" : "")
         )}
         style={{
           // Sidebar
-          minWidth: showSidebar ? `${SIDEBAR_WIDTH}px` : "0px",
-          maxWidth: showSidebar ? `${SIDEBAR_WIDTH}px` : "0px",
-          width: showSidebar ? `${SIDEBAR_WIDTH}px` : "0px"
+          minWidth: isSidebarVisible ? `${SIDEBAR_WIDTH}px` : "0px",
+          maxWidth: isSidebarVisible ? `${SIDEBAR_WIDTH}px` : "0px",
+          width: isSidebarVisible ? `${SIDEBAR_WIDTH}px` : "0px"
         }}
       >
-        {showSidebar && (
+        {isSidebarVisible && (
           <Tabs
             className="flex h-full"
             value={contentType}
@@ -93,10 +101,26 @@ export const Dashboard: FC<DashboardProps> = ({ children }) => {
           >
             <SidebarSwitcher onContentTypeChange={setContentType} />
 
-            <Sidebar contentType={contentType} showSidebar={showSidebar} />
+            <Sidebar contentType={contentType} showSidebar={isSidebarVisible} />
           </Tabs>
         )}
       </div>
+
+      {!isProduction && (
+        <Button
+          className={cn(
+            "absolute left-[4px] top-[50%] z-10 size-[32px] cursor-pointer"
+          )}
+          style={{
+            transform: isSidebarVisible ? "rotate(180deg)" : "rotate(0deg)"
+          }}
+          variant="ghost"
+          size="icon"
+          onClick={handleToggleSidebar}
+        >
+          <IconChevronCompactRight size={24} />
+        </Button>
+      )}
 
       <div
         className="bg-muted/50 relative flex w-screen min-w-[90%] grow flex-col sm:min-w-fit"
@@ -112,21 +136,6 @@ export const Dashboard: FC<DashboardProps> = ({ children }) => {
         ) : (
           children
         )}
-
-        <Button
-          className={cn(
-            "absolute left-[4px] top-[50%] z-10 size-[32px] cursor-pointer"
-          )}
-          style={{
-            // marginLeft: showSidebar ? `${SIDEBAR_WIDTH}px` : "0px",
-            transform: showSidebar ? "rotate(180deg)" : "rotate(0deg)"
-          }}
-          variant="ghost"
-          size="icon"
-          onClick={handleToggleSidebar}
-        >
-          <IconChevronCompactRight size={24} />
-        </Button>
       </div>
     </div>
   )
